@@ -1,141 +1,166 @@
 import streamlit as st
 from groq import Groq
 
-# 🔑 Setup
-st.set_page_config(page_title="Riva AI", page_icon="🤖", layout="wide")
-
+# 🔑 API
 client = Groq(api_key=st.secrets["GROQ_API_KEY"])
 
-# 🎨 GLOBAL CSS (ULTRA ROUNDED + GLASS UI)
+# 🧠 MEMORY
+if "messages" not in st.session_state:
+    st.session_state.messages = []
+
+if "sidebar" not in st.session_state:
+    st.session_state.sidebar = True
+
+# 🎛 SIDEBAR TOGGLE BUTTON
+if st.button("☰"):
+    st.session_state.sidebar = not st.session_state.sidebar
+
+if not st.session_state.sidebar:
+    st.markdown('<div class="sidebar-collapsed">', unsafe_allow_html=True)
+
+# 🎨 UI CSS
 st.markdown("""
 <style>
 
-/* 🌊 SOFT BACKGROUND (TEAL → LIGHT BLUE) */
+/* 🌊 BACKGROUND */
 html, body, [data-testid="stAppViewContainer"] {
-    height: 100%;
-    margin: 0;
-    background: linear-gradient(to bottom right, #0ea5a4, #60a5fa) !important;
+    background: linear-gradient(135deg, #0ea5a4, #60a5fa) !important;
 }
 
-/* REMOVE DEFAULT WHITE AREAS */
+/* 🧊 GLASS OVERLAY */
+[data-testid="stAppViewContainer"]::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    background: rgba(255,255,255,0.08);
+    backdrop-filter: blur(40px);
+    z-index: 0;
+}
+
+/* REMOVE WHITE */
 [data-testid="stHeader"] {
     background: transparent !important;
 }
 
-[data-testid="stToolbar"] {
-    display: none;
-}
-
-/* MAIN LAYOUT */
+/* MAIN */
 .block-container {
+    position: relative;
+    z-index: 1;
     padding: 2rem;
 }
 
-/* 🌟 GLOBAL ROUNDNESS */
+/* ROUND EVERYTHING */
 * {
     border-radius: 18px !important;
 }
 
-/* 🧊 SIDEBAR (GLASS) */
+/* SIDEBAR */
 section[data-testid="stSidebar"] {
-    background: rgba(255, 255, 255, 0.08);
-    backdrop-filter: blur(15px);
+    background: rgba(255,255,255,0.08) !important;
+    backdrop-filter: blur(20px);
+    transition: all 0.3s ease;
 }
 
-/* 🟣 USER BUBBLE (SOFT PURPLE GLASS) */
+/* SIDEBAR HIDE */
+.sidebar-collapsed section[data-testid="stSidebar"] {
+    margin-left: -300px;
+}
+
+/* USER BUBBLE */
 .user-bubble {
     background: rgba(168, 85, 247, 0.25);
-    border: 1px solid rgba(168, 85, 247, 0.35);
+    border: 1px solid rgba(255,255,255,0.2);
     padding: 14px 18px;
-    margin: 10px 0;
     max-width: 70%;
     margin-left: auto;
     color: white;
-    backdrop-filter: blur(10px);
+    backdrop-filter: blur(12px);
 }
 
-/* 🔵 AI BUBBLE (TEAL → LIGHT BLUE GLASS) */
+/* AI BUBBLE */
 .ai-bubble {
-    background: linear-gradient(to right, rgba(14, 165, 164, 0.35), rgba(96, 165, 250, 0.35));
+    background: rgba(255,255,255,0.15);
     border: 1px solid rgba(255,255,255,0.2);
     padding: 14px 18px;
-    margin: 10px 0;
     max-width: 70%;
     margin-right: auto;
     color: white;
-    backdrop-filter: blur(10px);
+    backdrop-filter: blur(12px);
 }
 
-/* 💬 INPUT BOX (CLEAN GLASS) */
+/* INPUT */
 textarea {
-    background: rgba(255, 255, 255, 0.1) !important;
-    color: white !important;
+    background: rgba(255,255,255,0.15) !important;
     border-radius: 30px !important;
     border: 1px solid rgba(255,255,255,0.25) !important;
+    color: white !important;
     padding: 14px !important;
 }
 
-/* 🔘 BUTTON */
+/* BUTTON */
 button {
     border-radius: 30px !important;
-    background: linear-gradient(to right, #0ea5a4, #60a5fa) !important;
+    background: rgba(255,255,255,0.2) !important;
     color: white !important;
-    border: none !important;
+    border: 1px solid rgba(255,255,255,0.3) !important;
 }
 
-/* 🏷 TITLE */
+/* TITLE */
 h1 {
     color: white;
     text-align: center;
-    font-weight: 600;
+}
+
+[data-testid="stChatInput"] {
+    background: transparent !important;
 }
 
 </style>
 """, unsafe_allow_html=True)
 
-
-# 🧠 Sidebar
+# 📌 SIDEBAR CONTENT
 with st.sidebar:
-    st.markdown("## ⚙️ Riva Control")
+    st.title("⚙️ Riva Control")
     st.write("Your futuristic assistant")
 
     if st.button("🧹 Clear Chat"):
         st.session_state.messages = []
         st.rerun()
 
-# 🧠 Memory
-if "messages" not in st.session_state:
-    st.session_state.messages = [
-        {"role": "system", "content": "You are Riva, a futuristic, calm, slightly witty AI assistant."}
-    ]
-
-# 🏷 Title
+# 🏷 TITLE
 st.title("🤖 Riva AI")
 
-# 💬 Chat Display
+# 💬 DISPLAY CHAT
 for msg in st.session_state.messages:
     if msg["role"] == "user":
         st.markdown(f'<div class="user-bubble">{msg["content"]}</div>', unsafe_allow_html=True)
-    elif msg["role"] == "assistant":
+    else:
         st.markdown(f'<div class="ai-bubble">{msg["content"]}</div>', unsafe_allow_html=True)
 
-# 🧾 Input
+# 💬 INPUT
 user_input = st.chat_input("Message Riva...")
 
 if user_input:
+    # save user message
     st.session_state.messages.append({"role": "user", "content": user_input})
 
-    try:
-        response = client.chat.completions.create(
-            model="llama-3.1-8b-instant",
-            messages=st.session_state.messages
-        )
+    # display user
+    st.markdown(f'<div class="user-bubble">{user_input}</div>', unsafe_allow_html=True)
 
-        reply = response.choices[0].message.content
+    # 🤖 AI RESPONSE
+    response = client.chat.completions.create(
+        model="mixtral-8x7b-32768",
+        messages=st.session_state.messages
+    )
 
-    except Exception as e:
-        reply = f"⚠️ {str(e)}"
+    reply = response.choices[0].message.content
 
+    # save AI message
     st.session_state.messages.append({"role": "assistant", "content": reply})
 
-    st.rerun()
+    # display AI
+    st.markdown(f'<div class="ai-bubble">{reply}</div>', unsafe_allow_html=True)
+
+# CLOSE SIDEBAR DIV
+if not st.session_state.sidebar:
+    st.markdown('</div>', unsafe_allow_html=True)
