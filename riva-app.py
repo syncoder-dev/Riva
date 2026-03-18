@@ -1,64 +1,67 @@
 import streamlit as st
 from groq import Groq
 
-# 🔧 CONFIG
+# ⚙️ CONFIG
 st.set_page_config(page_title="Riva AI", layout="wide")
 
-# 🔑 API
 client = Groq(api_key=st.secrets["GROQ_API_KEY"])
 
 # 🧠 MEMORY
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-# 🎨 UI STYLE
+if "sidebar_open" not in st.session_state:
+    st.session_state.sidebar_open = True
+
+# 🎨 UI
 st.markdown("""
 <style>
 
-/* 🌊 BACKGROUND */
+/* 🌌 BACKGROUND */
 html, body, [data-testid="stAppViewContainer"] {
-    background: linear-gradient(135deg, #0ea5a4, #60a5fa);
+    background: linear-gradient(135deg, #6d28d9, #0f172a);
     color: white;
 }
 
-/* REMOVE HEADER */
+/* REMOVE DEFAULT HEADER */
 [data-testid="stHeader"] {
     background: transparent;
 }
 
-/* MAIN PADDING */
+/* SIDEBAR STYLE */
+section[data-testid="stSidebar"] {
+    background: rgba(15,23,42,0.6);
+    backdrop-filter: blur(20px);
+    transition: all 0.3s ease;
+}
+
+/* CHAT CONTAINER */
 .block-container {
     padding: 2rem;
 }
 
-/* SIDEBAR */
-section[data-testid="stSidebar"] {
-    background: rgba(255,255,255,0.08);
-}
-
-/* CHAT BUBBLES */
-.user {
+/* 💬 USER BUBBLE */
+.user-bubble {
     background: rgba(168,85,247,0.35);
-    padding: 12px;
+    padding: 12px 16px;
     margin: 10px 0;
     border-radius: 20px;
     text-align: right;
+    animation: fadeIn 0.3s ease;
 }
 
-.ai {
-    background: rgba(255,255,255,0.25);
-    padding: 12px;
+/* 🤖 AI BUBBLE */
+.ai-bubble {
+    background: rgba(59,130,246,0.25);
+    padding: 12px 16px;
     margin: 10px 0;
     border-radius: 20px;
     text-align: left;
+    animation: fadeIn 0.3s ease;
 }
 
-/* 💥 REMOVE BLACK BAR */
+/* ✨ INPUT BAR FIX */
 div[data-testid="stChatInputContainer"] {
-    background: transparent !important;
-}
-
-div[data-testid="stBottom"] {
     background: transparent !important;
 }
 
@@ -67,25 +70,31 @@ div[data-testid="stChatInput"] {
     background: rgba(255,255,255,0.08) !important;
     backdrop-filter: blur(20px);
     border-radius: 30px !important;
-    padding: 10px !important;
     border: 1px solid rgba(255,255,255,0.2);
+    padding: 10px !important;
 }
 
-/* TEXT INPUT */
+/* TEXT */
 div[data-testid="stChatInput"] textarea {
-    background: transparent !important;
     color: white !important;
+    background: transparent !important;
 }
 
-/* PLACEHOLDER TEXT */
+/* PLACEHOLDER */
 textarea::placeholder {
-    color: rgba(255,255,255,0.6) !important;
+    color: rgba(255,255,255,0.5) !important;
+}
+
+/* ANIMATION */
+@keyframes fadeIn {
+    from {opacity: 0; transform: translateY(10px);}
+    to {opacity: 1; transform: translateY(0);}
 }
 
 </style>
 """, unsafe_allow_html=True)
 
-# 📌 SIDEBAR
+# 🎛 SIDEBAR CONTROL
 with st.sidebar:
     st.title("⚙️ Riva")
     if st.button("🧹 Clear Chat"):
@@ -93,36 +102,29 @@ with st.sidebar:
         st.rerun()
 
 # 🏷 TITLE
-st.title("🤖 Riva AI")
+st.title("🤖 Riva")
 
-# 💬 DISPLAY CHAT (NO SYSTEM MESSAGES)
+# 💬 CHAT DISPLAY
 for msg in st.session_state.messages:
     if msg["role"] == "user":
-        st.markdown(f'<div class="user">{msg["content"]}</div>', unsafe_allow_html=True)
-    elif msg["role"] == "assistant":
-        st.markdown(f'<div class="ai">{msg["content"]}</div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="user-bubble">{msg["content"]}</div>', unsafe_allow_html=True)
+    else:
+        st.markdown(f'<div class="ai-bubble">{msg["content"]}</div>', unsafe_allow_html=True)
 
 # 💬 INPUT
 user_input = st.chat_input("Message Riva...")
 
 if user_input:
-    # save user msg
     st.session_state.messages.append({"role": "user", "content": user_input})
 
-    # system prompt (hidden)
-    messages_for_api = [
-        {"role": "system", "content": "You are Riva, a futuristic, calm, slightly witty AI assistant."}
-    ] + st.session_state.messages
+    response = client.chat.completions.create(
+        model="llama-3.3-70b-versatile",
+        messages=[
+            {"role": "system", "content": "You are Riva, calm, futuristic, slightly witty."}
+        ] + st.session_state.messages
+    )
 
-    # 🤖 API CALL
-    with st.spinner("Thinking..."):
-        response = client.chat.completions.create(
-            model="llama-3.3-70b-versatile",
-            messages=messages_for_api
-        )
-        reply = response.choices[0].message.content
-
-    # save AI reply
+    reply = response.choices[0].message.content
     st.session_state.messages.append({"role": "assistant", "content": reply})
 
     st.rerun()
