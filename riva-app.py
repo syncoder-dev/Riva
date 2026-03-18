@@ -6,59 +6,94 @@ st.set_page_config(page_title="Riva AI", page_icon="🤖", layout="wide")
 
 client = Groq(api_key=st.secrets["GROQ_API_KEY"])
 
-# 🎨 CUSTOM CSS (THIS IS THE MAGIC)
+# 🎨 GLOBAL CSS (ULTRA ROUNDED + GLASS UI)
 st.markdown("""
 <style>
 
+/* Background Gradient */
 body {
-    background: linear-gradient(135deg, #0f172a, #1e293b);
+    background: linear-gradient(135deg, #14b8a6, #020617);
+}
+
+/* Main container */
+.block-container {
+    padding: 2rem;
+}
+
+/* EVERYTHING ROUNDED */
+* {
+    border-radius: 18px !important;
 }
 
 /* Sidebar */
 section[data-testid="stSidebar"] {
-    background: rgba(15, 23, 42, 0.8);
-    backdrop-filter: blur(10px);
+    background: rgba(2, 6, 23, 0.75);
+    backdrop-filter: blur(20px);
+    border-radius: 20px !important;
 }
 
-/* Chat container spacing */
-.block-container {
-    padding-top: 2rem;
-}
-
-/* USER MESSAGE */
-.user-bubble {
-    background: rgba(168, 85, 247, 0.2);
-    border: 1px solid rgba(168, 85, 247, 0.4);
-    padding: 12px 16px;
-    border-radius: 15px;
-    margin: 8px 0;
-    color: white;
-    backdrop-filter: blur(10px);
-}
-
-/* AI MESSAGE */
-.ai-bubble {
-    background: linear-gradient(135deg, rgba(30, 64, 175, 0.4), rgba(15, 23, 42, 0.8));
-    border: 1px solid rgba(59, 130, 246, 0.3);
-    padding: 12px 16px;
-    border-radius: 15px;
-    margin: 8px 0;
-    color: white;
-    backdrop-filter: blur(10px);
-}
-
-/* Input box */
-div[data-testid="stChatInput"] textarea {
-    background: rgba(15, 23, 42, 0.8) !important;
-    color: white !important;
-    border-radius: 12px !important;
-    border: 1px solid rgba(99, 102, 241, 0.4) !important;
-}
-
-/* Title */
+/* Header */
 h1 {
-    color: white;
     text-align: center;
+    color: white;
+}
+
+/* USER BUBBLE */
+.user-bubble {
+    background: rgba(168, 85, 247, 0.25);
+    border: 1px solid rgba(168, 85, 247, 0.4);
+    padding: 14px 18px;
+    margin: 10px 0;
+    max-width: 70%;
+    margin-left: auto;
+    color: white;
+    backdrop-filter: blur(12px);
+}
+
+/* AI BUBBLE */
+.ai-bubble {
+    background: linear-gradient(135deg, rgba(20, 184, 166, 0.3), rgba(2, 6, 23, 0.85));
+    border: 1px solid rgba(20, 184, 166, 0.4);
+    padding: 14px 18px;
+    margin: 10px 0;
+    max-width: 70%;
+    margin-right: auto;
+    color: white;
+    backdrop-filter: blur(12px);
+}
+
+/* Chat input container */
+div[data-testid="stChatInput"] {
+    background: transparent !important;
+    border-radius: 30px !important;
+    padding: 10px;
+}
+
+/* Text input box */
+textarea {
+    background: rgba(2, 6, 23, 0.8) !important;
+    color: white !important;
+    border-radius: 30px !important;
+    border: 1px solid rgba(20, 184, 166, 0.4) !important;
+    padding: 14px !important;
+}
+
+/* Button styling */
+button {
+    border-radius: 30px !important;
+    background: linear-gradient(135deg, #14b8a6, #1e3a8a) !important;
+    color: white !important;
+    border: none !important;
+}
+
+/* Remove ugly default borders */
+.css-1d391kg, .css-1cpxqw2 {
+    border: none !important;
+}
+
+/* Smooth scroll feel */
+html {
+    scroll-behavior: smooth;
 }
 
 </style>
@@ -66,20 +101,23 @@ h1 {
 
 # 🧠 Sidebar
 with st.sidebar:
-    st.title("⚙️ Riva Control")
-    st.write("Your AI assistant")
-    if st.button("Clear Chat"):
+    st.markdown("## ⚙️ Riva Control")
+    st.write("Your futuristic assistant")
+
+    if st.button("🧹 Clear Chat"):
         st.session_state.messages = []
+        st.rerun()
 
 # 🧠 Memory
 if "messages" not in st.session_state:
     st.session_state.messages = [
-        {"role": "system", "content": "You are Riva, a futuristic, witty AI assistant."}
+        {"role": "system", "content": "You are Riva, a futuristic, calm, slightly witty AI assistant."}
     ]
 
+# 🏷 Title
 st.title("🤖 Riva AI")
 
-# 💬 Display messages
+# 💬 Chat Display
 for msg in st.session_state.messages:
     if msg["role"] == "user":
         st.markdown(f'<div class="user-bubble">{msg["content"]}</div>', unsafe_allow_html=True)
@@ -87,7 +125,7 @@ for msg in st.session_state.messages:
         st.markdown(f'<div class="ai-bubble">{msg["content"]}</div>', unsafe_allow_html=True)
 
 # 🧾 Input
-user_input = st.chat_input("Talk to Riva...")
+user_input = st.chat_input("Message Riva...")
 
 if user_input:
     st.session_state.messages.append({"role": "user", "content": user_input})
@@ -101,7 +139,7 @@ if user_input:
         reply = response.choices[0].message.content
 
     except Exception as e:
-        reply = f"⚠️ Error: {str(e)}"
+        reply = f"⚠️ {str(e)}"
 
     st.session_state.messages.append({"role": "assistant", "content": reply})
 
