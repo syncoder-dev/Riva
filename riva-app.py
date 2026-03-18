@@ -10,90 +10,78 @@ client = Groq(api_key=st.secrets["GROQ_API_KEY"])
 st.markdown("""
 <style>
 
-/* Background Gradient */
-body {
-    background: linear-gradient(135deg, #14b8a6, #020617);
+/* FORCE FULL BACKGROUND */
+html, body, [data-testid="stAppViewContainer"] {
+    height: 100%;
+    margin: 0;
+    background: linear-gradient(to bottom right, #14b8a6, #020617) !important;
 }
 
-/* Main container */
+/* REMOVE STREAMLIT WHITE LAYERS */
+[data-testid="stHeader"] {
+    background: transparent !important;
+}
+
+[data-testid="stToolbar"] {
+    display: none;
+}
+
+/* MAIN CONTAINER */
 .block-container {
     padding: 2rem;
 }
 
 /* EVERYTHING ROUNDED */
 * {
-    border-radius: 18px !important;
-}
-
-/* Sidebar */
-section[data-testid="stSidebar"] {
-    background: rgba(2, 6, 23, 0.75);
-    backdrop-filter: blur(20px);
     border-radius: 20px !important;
 }
 
-/* Header */
-h1 {
-    text-align: center;
-    color: white;
+/* SIDEBAR */
+section[data-testid="stSidebar"] {
+    background: #020617 !important;
 }
 
 /* USER BUBBLE */
 .user-bubble {
-    background: rgba(168, 85, 247, 0.25);
-    border: 1px solid rgba(168, 85, 247, 0.4);
+    background: #7c3aed;
     padding: 14px 18px;
     margin: 10px 0;
     max-width: 70%;
     margin-left: auto;
     color: white;
-    backdrop-filter: blur(12px);
 }
 
 /* AI BUBBLE */
 .ai-bubble {
-    background: linear-gradient(135deg, rgba(20, 184, 166, 0.3), rgba(2, 6, 23, 0.85));
-    border: 1px solid rgba(20, 184, 166, 0.4);
+    background: linear-gradient(to right, #14b8a6, #1e3a8a);
     padding: 14px 18px;
     margin: 10px 0;
     max-width: 70%;
     margin-right: auto;
     color: white;
-    backdrop-filter: blur(12px);
 }
 
-/* Chat input container */
-div[data-testid="stChatInput"] {
-    background: transparent !important;
-    border-radius: 30px !important;
-    padding: 10px;
-}
-
-/* Text input box */
+/* INPUT BOX */
 textarea {
-    background: rgba(2, 6, 23, 0.8) !important;
+    background: #020617 !important;
     color: white !important;
     border-radius: 30px !important;
-    border: 1px solid rgba(20, 184, 166, 0.4) !important;
+    border: 1px solid #14b8a6 !important;
     padding: 14px !important;
 }
 
-/* Button styling */
+/* BUTTON */
 button {
     border-radius: 30px !important;
-    background: linear-gradient(135deg, #14b8a6, #1e3a8a) !important;
+    background: linear-gradient(to right, #14b8a6, #1e3a8a) !important;
     color: white !important;
     border: none !important;
 }
 
-/* Remove ugly default borders */
-.css-1d391kg, .css-1cpxqw2 {
-    border: none !important;
-}
-
-/* Smooth scroll feel */
-html {
-    scroll-behavior: smooth;
+/* TITLE */
+h1 {
+    color: white;
+    text-align: center;
 }
 
 </style>
