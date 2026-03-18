@@ -10,14 +10,14 @@ client = Groq(api_key=st.secrets["GROQ_API_KEY"])
 st.markdown("""
 <style>
 
-/* FORCE FULL BACKGROUND */
+/* 🌊 SOFT BACKGROUND (TEAL → LIGHT BLUE) */
 html, body, [data-testid="stAppViewContainer"] {
     height: 100%;
     margin: 0;
-    background: linear-gradient(to bottom right, #14b8a6, #020617) !important;
+    background: linear-gradient(to bottom right, #0ea5a4, #60a5fa) !important;
 }
 
-/* REMOVE STREAMLIT WHITE LAYERS */
+/* REMOVE DEFAULT WHITE AREAS */
 [data-testid="stHeader"] {
     background: transparent !important;
 }
@@ -26,66 +26,73 @@ html, body, [data-testid="stAppViewContainer"] {
     display: none;
 }
 
-/* MAIN CONTAINER */
+/* MAIN LAYOUT */
 .block-container {
     padding: 2rem;
 }
 
-/* EVERYTHING ROUNDED */
+/* 🌟 GLOBAL ROUNDNESS */
 * {
-    border-radius: 20px !important;
+    border-radius: 18px !important;
 }
 
-/* SIDEBAR */
+/* 🧊 SIDEBAR (GLASS) */
 section[data-testid="stSidebar"] {
-    background: #020617 !important;
+    background: rgba(255, 255, 255, 0.08);
+    backdrop-filter: blur(15px);
 }
 
-/* USER BUBBLE */
+/* 🟣 USER BUBBLE (SOFT PURPLE GLASS) */
 .user-bubble {
-    background: #7c3aed;
+    background: rgba(168, 85, 247, 0.25);
+    border: 1px solid rgba(168, 85, 247, 0.35);
     padding: 14px 18px;
     margin: 10px 0;
     max-width: 70%;
     margin-left: auto;
     color: white;
+    backdrop-filter: blur(10px);
 }
 
-/* AI BUBBLE */
+/* 🔵 AI BUBBLE (TEAL → LIGHT BLUE GLASS) */
 .ai-bubble {
-    background: linear-gradient(to right, #14b8a6, #1e3a8a);
+    background: linear-gradient(to right, rgba(14, 165, 164, 0.35), rgba(96, 165, 250, 0.35));
+    border: 1px solid rgba(255,255,255,0.2);
     padding: 14px 18px;
     margin: 10px 0;
     max-width: 70%;
     margin-right: auto;
     color: white;
+    backdrop-filter: blur(10px);
 }
 
-/* INPUT BOX */
+/* 💬 INPUT BOX (CLEAN GLASS) */
 textarea {
-    background: #020617 !important;
+    background: rgba(255, 255, 255, 0.1) !important;
     color: white !important;
     border-radius: 30px !important;
-    border: 1px solid #14b8a6 !important;
+    border: 1px solid rgba(255,255,255,0.25) !important;
     padding: 14px !important;
 }
 
-/* BUTTON */
+/* 🔘 BUTTON */
 button {
     border-radius: 30px !important;
-    background: linear-gradient(to right, #14b8a6, #1e3a8a) !important;
+    background: linear-gradient(to right, #0ea5a4, #60a5fa) !important;
     color: white !important;
     border: none !important;
 }
 
-/* TITLE */
+/* 🏷 TITLE */
 h1 {
     color: white;
     text-align: center;
+    font-weight: 600;
 }
 
 </style>
 """, unsafe_allow_html=True)
+
 
 # 🧠 Sidebar
 with st.sidebar:
