@@ -31,7 +31,7 @@ if user_input:
     try:
         # 🤖 AI response
         response = client.chat.completions.create(
-            model="llama3-8b-8192",  # safe model
+            model="llama-3.3-70b-versatile",  # safe model
             messages=st.session_state.messages
         )
 
