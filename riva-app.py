@@ -117,7 +117,7 @@ if user_input:
     # 🤖 API CALL
     with st.spinner("Thinking..."):
         response = client.chat.completions.create(
-            model="mixtral-8x7b-32768",
+            model="llama-3.3-70b-versatile",
             messages=messages_for_api
         )
         reply = response.choices[0].message.content
