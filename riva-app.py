@@ -1,7 +1,7 @@
 import streamlit as st
 from groq import Groq
 import base64
-PROMPTS
+#PROMPTS
 REVA_PROMPT = "You are Riva, a calm, futuristic AI assistant. You are clear, slightly witty, and helpful."
 
 REVO_PROMPT = "You are Revo, the hidden intelligence layer. You refine responses to be smarter, sharper, and more structured."
