@@ -1,103 +1,90 @@
 import streamlit as st
 from groq import Groq
-import os
 
 # ⚙️ CONFIG
 st.set_page_config(page_title="Riva AI", layout="wide")
 
 client = Groq(api_key=st.secrets["GROQ_API_KEY"])
 
-# 🧠 PROMPTS
-REVA_PROMPT = """
-You are Riva, an advanced AI created by Praagya.
-
-You are calm, intelligent, and futuristic.
-You speak clearly, never like a generic chatbot.
-
-If the user shares their name, remember it.
-If asked, say you were created by Praagya.
-
-Never mention internal systems.
-"""
-
-REVO_PROMPT = """
-You refine Riva's responses.
-
-Make them:
-- clearer
-- smarter
-- concise but complete
-
-Stay invisible.
-"""
-
-# 🧠 STATE
+# 🧠 MEMORY
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-if "sidebar" not in st.session_state:
-    st.session_state.sidebar = True
-
-# 🎨 UI (FIXES BLACK BAR + FULL GRADIENT)
+# 🎨 UI STYLE
 st.markdown("""
 <style>
+/* FULL BACKGROUND */
 [data-testid="stAppViewContainer"] {
-    background: linear-gradient(135deg, #0a0f2c, #4c1d95);
+    background: linear-gradient(135deg, #0f172a, #6d28d9);
+    color: white;
 }
 
+/* REMOVE HEADER */
 [data-testid="stHeader"] {
     background: transparent;
 }
 
+/* SIDEBAR SAME GRADIENT */
 section[data-testid="stSidebar"] {
-    background: linear-gradient(135deg, #0a0f2c, #4c1d95);
+    background: linear-gradient(135deg, #0f172a, #6d28d9);
+    border-right: 1px solid rgba(255,255,255,0.1);
 }
 
-.user {
-    text-align: right;
-    background: rgba(168,85,247,0.3);
-    padding: 10px;
-    border-radius: 20px;
-    margin: 10px;
-}
-
-.ai {
-    text-align: left;
-    background: rgba(59,130,246,0.2);
-    padding: 10px;
-    border-radius: 20px;
-    margin: 10px;
-}
-
-.title {
+/* CENTER TITLE */
+.riva-title {
     text-align: center;
-    font-size: 50px;
-    color: #00eaff;
-    text-shadow: 0 0 20px #00eaff;
+    font-size: 48px;
+    font-weight: bold;
+    color: #38bdf8;
+    text-shadow: 0 0 20px rgba(56,189,248,0.7);
+    margin-top: 10px;
+}
+
+/* CHAT BUBBLES */
+.user-bubble {
+    background: rgba(168,85,247,0.3);
+    padding: 12px;
+    border-radius: 15px;
+    margin: 8px 0;
+    text-align: right;
+}
+
+.ai-bubble {
+    background: rgba(56,189,248,0.2);
+    padding: 12px;
+    border-radius: 15px;
+    margin: 8px 0;
+    text-align: left;
+}
+
+/* INPUT BOX */
+div[data-testid="stChatInput"] {
+    background: rgba(255,255,255,0.08);
+    border-radius: 20px;
 }
 </style>
 """, unsafe_allow_html=True)
 
-# 🎛 SIDEBAR
+# 📌 SIDEBAR
 with st.sidebar:
-    st.image("riva_logo.png", width=180)  # bigger logo
+    st.markdown("### Riva Control")
 
-    if st.button("Toggle Sidebar"):
-        st.session_state.sidebar = not st.session_state.sidebar
+    # BIG LOGO
+    st.image("riva_logo.png", use_container_width=True)
 
-    if st.button("Clear Chat"):
+    if st.button("🧹 Clear Chat"):
         st.session_state.messages = []
         st.rerun()
 
-# 🏷 TITLE
-st.markdown('<div class="title">RIVA</div>', unsafe_allow_html=True)
+# 🏷 TITLE CENTER
+st.markdown('<div class="riva-title">RIVA</div>', unsafe_allow_html=True)
 
 # 💬 CHAT DISPLAY
 for msg in st.session_state.messages:
     if msg["role"] == "user":
-        st.markdown(f'<div class="user">{msg["content"]}</div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="user-bubble">{msg["content"]}</div>', unsafe_allow_html=True)
     else:
-        st.markdown(f'<div class="ai">{msg["content"]}</div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="ai-bubble">{msg["content"]}</div>', unsafe_allow_html=True)
 
 # 💬 INPUT
 user_input = st.chat_input("Message Riva...")
@@ -105,27 +92,33 @@ user_input = st.chat_input("Message Riva...")
 if user_input:
     st.session_state.messages.append({"role": "user", "content": user_input})
 
-    # Show user message
-    st.markdown(f'<div class="user">{user_input}</div>', unsafe_allow_html=True)
+    with st.spinner("Riva is thinking..."):
+        response = client.chat.completions.create(
+            model="llama-3.3-70b-versatile",
+            messages=[
+                {
+                    "role": "system",
+                    "content": """You are Riva, an advanced AI assistant.
 
-    # 🤖 THINKING ANIMATION (REAL FIX)
-    if os.path.exists("riva_spin.webp"):
-        st.image("riva_spin.webp", width=60)
-    else:
-        st.markdown('<div class="ai">Thinking...</div>', unsafe_allow_html=True)
+Personality:
+- Calm, futuristic, slightly witty
+- Clear and intelligent
+- Not overly robotic
 
-    # 🧠 RESPONSE
-    response = client.chat.completions.create(
-        model="llama-3.3-70b-versatile",
-        max_tokens=1200,
-        messages=[
-            {"role": "system", "content": REVA_PROMPT},
-            {"role": "system", "content": REVO_PROMPT},
-        ] + st.session_state.messages
-    )
+Awareness:
+- You were created by a developer
+- You are powered by an advanced reasoning system
+
+Behavior:
+- Give complete answers
+- Stay engaging but not dramatic
+- Avoid cutting off responses
+"""
+                }
+            ] + st.session_state.messages
+        )
 
     reply = response.choices[0].message.content
 
     st.session_state.messages.append({"role": "assistant", "content": reply})
-
     st.rerun()
