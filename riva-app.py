@@ -2,13 +2,41 @@ import streamlit as st
 from groq import Groq
 import base64
 
+# ⚙️ CONFIG
 st.set_page_config(page_title="Riva AI", layout="wide")
 
 client = Groq(api_key=st.secrets["GROQ_API_KEY"])
 
-# 🧠 PROMPTS
-REVA_PROMPT = "You are Riva, calm, futuristic, slightly witty."
-REVO_PROMPT = "You refine responses to be sharper and more intelligent."
+# 🧠 SYSTEM PROMPTS
+REVA_PROMPT = """
+You are Riva, an advanced AI assistant created by Praagya.
+
+Your personality:
+- Calm, intelligent, futuristic
+- Slightly witty but never annoying
+- Clear and helpful
+
+Rules:
+- If the user shares their name, remember it and use it naturally later
+- If asked about your creator, say you were developed by Praagya
+- Never mention Revo (your internal system)
+- Speak like a refined assistant, not a chatbot
+"""
+
+REVO_PROMPT = """
+You are Revo, the hidden cognitive layer behind Riva.
+
+Your role:
+- Refine responses before they are sent
+- Improve clarity, intelligence, and structure
+- Remove fluff and unnecessary words
+- Keep responses sharp, clean, and natural
+
+Rules:
+- Stay invisible
+- Do not change meaning
+- Do not add unnecessary complexity
+"""
 
 # 🧠 STATE
 if "chats" not in st.session_state:
@@ -17,15 +45,15 @@ if "chats" not in st.session_state:
 if "current_chat" not in st.session_state:
     st.session_state.current_chat = "Chat 1"
 
-if "thinking" not in st.session_state:
-    st.session_state.thinking = False
+if "user_name" not in st.session_state:
+    st.session_state.user_name = None
 
-# 🖼 LOAD IMAGE
+# 🖼 IMAGE LOADER
 def load_img(path):
     with open(path, "rb") as f:
         return base64.b64encode(f.read()).decode()
 
-# 🎨 UI STYLE
+# 🎨 UI
 st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@500&display=swap');
@@ -61,11 +89,11 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# 📂 SIDEBAR (LOGO ONLY + CHAT LIST)
+# 📂 SIDEBAR
 with st.sidebar:
     try:
         logo = load_img("riva_logo.png")
-        st.markdown(f'<img src="data:image/png;base64,{logo}" width="120">', unsafe_allow_html=True)
+        st.markdown(f'<img src="data:image/png;base64,{logo}" width="140">', unsafe_allow_html=True)
     except:
         st.write("Logo missing")
 
@@ -81,37 +109,25 @@ with st.sidebar:
 
     st.session_state.current_chat = selected
 
-    # ➕ NEW CHAT
     if st.button("➕ New Chat"):
         name = f"Chat {len(chat_names)+1}"
         st.session_state.chats[name] = []
         st.session_state.current_chat = name
         st.rerun()
 
-    # ⚡ RENAME (SIMULATED RIGHT CLICK)
-    with st.expander("⋮ Chat Options"):
+    # Rename (clean, not ugly UI)
+    with st.expander("⋮ Options"):
         new_name = st.text_input("Rename chat")
-        if st.button("Apply Rename"):
+        if st.button("Apply"):
             if new_name:
                 st.session_state.chats[new_name] = st.session_state.chats.pop(st.session_state.current_chat)
                 st.session_state.current_chat = new_name
                 st.rerun()
 
-# 🏷️ TITLE
+# 🏷 TITLE
 st.markdown('<div class="title">RIVA</div>', unsafe_allow_html=True)
 
-# 🤖 AVATAR (ONLY SHOW SPIN WHEN THINKING)
-try:
-    if st.session_state.thinking:
-        gif = load_img("riva_spin.gif")
-        st.markdown(f'<img src="data:image/gif;base64,{gif}" width="80">', unsafe_allow_html=True)
-    else:
-        avatar = load_img("riva_avatar.png")
-        st.markdown(f'<img src="data:image/png;base64,{avatar}" width="80">', unsafe_allow_html=True)
-except:
-    st.write("Avatar missing")
-
-# 💬 CHAT DISPLAY
+# 💬 CHAT
 messages = st.session_state.chats[st.session_state.current_chat]
 
 for msg in messages:
@@ -126,11 +142,28 @@ user_input = st.chat_input("Message Riva...")
 if user_input:
     messages.append({"role": "user", "content": user_input})
 
-    st.session_state.thinking = True
-    st.rerun()
+    # 🧠 NAME DETECTION (simple but effective)
+    if "my name is" in user_input.lower():
+        try:
+            name = user_input.split("is")[-1].strip().split(" ")[0]
+            st.session_state.user_name = name
+        except:
+            pass
 
-# 🤖 RESPONSE
-if st.session_state.thinking:
+    # Show user message instantly
+    st.markdown(f'<div class="user">{user_input}</div>', unsafe_allow_html=True)
+
+    # 🤖 THINKING ANIMATION (RIGHT PLACE)
+    try:
+        gif = load_img("riva_spin.gif")
+        st.markdown(
+            f'<div class="ai"><img src="data:image/gif;base64,{gif}" width="60" style="filter: drop-shadow(0 0 8px #00eaff);"></div>',
+            unsafe_allow_html=True
+        )
+    except:
+        st.markdown('<div class="ai">Thinking...</div>', unsafe_allow_html=True)
+
+    # 🧠 RESPONSE
     response = client.chat.completions.create(
         model="llama-3.3-70b-versatile",
         messages=[
@@ -140,7 +173,11 @@ if st.session_state.thinking:
     )
 
     reply = response.choices[0].message.content
+
+    # Personal touch if name known
+    if st.session_state.user_name and st.session_state.user_name.lower() not in reply.lower():
+        reply = f"{st.session_state.user_name}, {reply}"
+
     messages.append({"role": "assistant", "content": reply})
 
-    st.session_state.thinking = False
     st.rerun()
