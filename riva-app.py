@@ -1,5 +1,6 @@
 import streamlit as st
 from groq import Groq
+import time
 
 # ⚙️ CONFIG
 st.set_page_config(page_title="Riva AI", layout="wide")
@@ -9,7 +10,7 @@ client = Groq(api_key=st.secrets["GROQ_API_KEY"])
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-# 🎨 UI + ANIMATION CSS
+# 🎨 CSS
 st.markdown("""
 <style>
 html, body, [data-testid="stAppViewContainer"] {
@@ -21,23 +22,17 @@ html, body, [data-testid="stAppViewContainer"] {
     background: transparent;
 }
 
-section[data-testid="stSidebar"] {
-    background: rgba(15,23,42,0.6);
-    backdrop-filter: blur(20px);
-}
-
 .block-container {
     padding: 2rem;
 }
 
-/* 💬 CHAT */
+/* CHAT */
 .user-bubble {
     background: rgba(168,85,247,0.35);
     padding: 12px 16px;
     margin: 10px 0;
     border-radius: 20px;
     text-align: right;
-    animation: fadeIn 0.3s ease;
 }
 
 .ai-bubble {
@@ -46,51 +41,22 @@ section[data-testid="stSidebar"] {
     margin: 10px 0;
     border-radius: 20px;
     text-align: left;
-    animation: fadeIn 0.3s ease;
 }
 
-/* INPUT */
-div[data-testid="stChatInputContainer"] {
-    background: transparent !important;
-}
-
-div[data-testid="stChatInput"] {
-    background: rgba(255,255,255,0.08) !important;
-    backdrop-filter: blur(20px);
-    border-radius: 30px !important;
-    border: 1px solid rgba(255,255,255,0.2);
-    padding: 10px !important;
-}
-
-div[data-testid="stChatInput"] textarea {
-    color: white !important;
-    background: transparent !important;
-}
-
-textarea::placeholder {
-    color: rgba(255,255,255,0.5) !important;
-}
-
-/* ✨ ANIMATION */
-@keyframes fadeIn {
-    from {opacity: 0; transform: translateY(10px);}
-    to {opacity: 1; transform: translateY(0);}
-}
-
-/* 🌀 AVATAR */
-.riva-avatar {
+/* AVATAR */
+.avatar {
     display: flex;
     justify-content: center;
     margin-bottom: 10px;
 }
 
-.riva-avatar img {
+.avatar img {
     width: 90px;
 }
 
-/* 🔄 THINKING */
+/* ANIMATION */
 .thinking {
-    animation: spin 2s linear infinite, pulse 2s ease-in-out infinite;
+    animation: spin 1.5s linear infinite, pulse 1.5s ease-in-out infinite;
 }
 
 @keyframes spin {
@@ -106,19 +72,15 @@ textarea::placeholder {
 </style>
 """, unsafe_allow_html=True)
 
-# 🎛 SIDEBAR
-with st.sidebar:
-    st.title("⚙️ Riva")
-    if st.button("🧹 Clear Chat"):
-        st.session_state.messages = []
-        st.rerun()
-
-# 🏷 TITLE + AVATAR
+# 🏷 TITLE
 st.title("RIVA")
 
+# 🌀 AVATAR PLACEHOLDER
 avatar_placeholder = st.empty()
+
+# default avatar
 avatar_placeholder.markdown(
-    '<div class="riva-avatar"><img src="riva_avatar.png"></div>',
+    '<div class="avatar"><img src="riva_avatar.png"></div>',
     unsafe_allow_html=True
 )
 
@@ -133,14 +95,19 @@ for msg in st.session_state.messages:
 user_input = st.chat_input("Message Riva...")
 
 if user_input:
+    # add user message
     st.session_state.messages.append({"role": "user", "content": user_input})
 
-    # 🔄 START ANIMATION
+    # 🔄 show animation BEFORE API call
     avatar_placeholder.markdown(
-        '<div class="riva-avatar"><img src="riva_avatar.png" class="thinking"></div>',
+        '<div class="avatar"><img src="riva_avatar.png" class="thinking"></div>',
         unsafe_allow_html=True
     )
 
+    # small delay so animation is visible (important!)
+    time.sleep(0.3)
+
+    # 🤖 API CALL
     response = client.chat.completions.create(
         model="llama-3.3-70b-versatile",
         messages=[
@@ -149,12 +116,9 @@ if user_input:
     )
 
     reply = response.choices[0].message.content
+
+    # save response
     st.session_state.messages.append({"role": "assistant", "content": reply})
 
-    # 🧠 STOP ANIMATION
-    avatar_placeholder.markdown(
-        '<div class="riva-avatar"><img src="riva_avatar.png"></div>',
-        unsafe_allow_html=True
-    )
-
+    # rerun to update UI
     st.rerun()
