@@ -1,20 +1,22 @@
 import streamlit as st
 from groq import Groq
-import time
 
 # ⚙️ CONFIG
-st.set_page_config(page_title="Riva AI", layout="wide")
+st.set_page_config(page_title="RIVA", layout="wide")
 client = Groq(api_key=st.secrets["GROQ_API_KEY"])
 
-# 🧠 MEMORY
+# 🧠 STATE
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-# 🎨 CSS
+if "thinking" not in st.session_state:
+    st.session_state.thinking = False
+
+# 🎨 BACKGROUND + UI
 st.markdown("""
 <style>
 html, body, [data-testid="stAppViewContainer"] {
-    background: linear-gradient(135deg, #6d28d9, #0f172a);
+    background: linear-gradient(135deg, #0a192f, #6d28d9);
     color: white;
 }
 
@@ -28,7 +30,7 @@ html, body, [data-testid="stAppViewContainer"] {
 
 /* CHAT */
 .user-bubble {
-    background: rgba(168,85,247,0.35);
+    background: rgba(168,85,247,0.3);
     padding: 12px 16px;
     margin: 10px 0;
     border-radius: 20px;
@@ -42,47 +44,17 @@ html, body, [data-testid="stAppViewContainer"] {
     border-radius: 20px;
     text-align: left;
 }
-
-/* AVATAR */
-.avatar {
-    display: flex;
-    justify-content: center;
-    margin-bottom: 10px;
-}
-
-.avatar img {
-    width: 90px;
-}
-
-/* ANIMATION */
-.thinking {
-    animation: spin 1.5s linear infinite, pulse 1.5s ease-in-out infinite;
-}
-
-@keyframes spin {
-    from {transform: rotate(0deg);}
-    to {transform: rotate(360deg);}
-}
-
-@keyframes pulse {
-    0% {transform: scale(1);}
-    50% {transform: scale(1.1);}
-    100% {transform: scale(1);}
-}
 </style>
 """, unsafe_allow_html=True)
 
-# 🏷 TITLE
-st.title("RIVA")
+# 🏷 LOGO
+st.image("riva_logo.png", width=180)
 
-# 🌀 AVATAR PLACEHOLDER
-avatar_placeholder = st.empty()
-
-# default avatar
-avatar_placeholder.markdown(
-    '<div class="avatar"><img src="riva_avatar.png"></div>',
-    unsafe_allow_html=True
-)
+# 🌀 AVATAR
+if st.session_state.thinking:
+    st.image("riva_spin.gif", width=100)
+else:
+    st.image("riva_avatar.png", width=100)
 
 # 💬 CHAT DISPLAY
 for msg in st.session_state.messages:
@@ -92,22 +64,17 @@ for msg in st.session_state.messages:
         st.markdown(f'<div class="ai-bubble">{msg["content"]}</div>', unsafe_allow_html=True)
 
 # 💬 INPUT
-user_input = st.chat_input("Message Riva...")
+user_input = st.chat_input("Message RIVA...")
 
 if user_input:
-    # add user message
     st.session_state.messages.append({"role": "user", "content": user_input})
 
-    # 🔄 show animation BEFORE API call
-    avatar_placeholder.markdown(
-        '<div class="avatar"><img src="riva_avatar.png" class="thinking"></div>',
-        unsafe_allow_html=True
-    )
+    # 🔄 start animation
+    st.session_state.thinking = True
+    st.rerun()
 
-    # small delay so animation is visible (important!)
-    time.sleep(0.3)
-
-    # 🤖 API CALL
+# 🤖 RESPONSE
+if st.session_state.thinking:
     response = client.chat.completions.create(
         model="llama-3.3-70b-versatile",
         messages=[
@@ -116,9 +83,8 @@ if user_input:
     )
 
     reply = response.choices[0].message.content
-
-    # save response
     st.session_state.messages.append({"role": "assistant", "content": reply})
 
-    # rerun to update UI
+    # 🧠 stop animation
+    st.session_state.thinking = False
     st.rerun()
