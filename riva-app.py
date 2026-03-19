@@ -1,25 +1,52 @@
 import streamlit as st
 from groq import Groq
+import uuid
 
 # ⚙️ CONFIG
 st.set_page_config(page_title="Riva AI", layout="wide")
 
 client = Groq(api_key=st.secrets["GROQ_API_KEY"])
 
-# 🧠 MEMORY
-if "messages" not in st.session_state:
-    st.session_state.messages = []
+# 🧠 MULTI CHAT MEMORY
+if "chats" not in st.session_state:
+    st.session_state.chats = {}
+
+if "current_chat" not in st.session_state:
+    chat_id = str(uuid.uuid4())
+    st.session_state.current_chat = chat_id
+    st.session_state.chats[chat_id] = []
 
 # 🎨 UI STYLE
 st.markdown("""
 <style>
+
+/* BACKGROUND */
 html, body, [data-testid="stAppViewContainer"] {
     background: linear-gradient(135deg, #0a0f2c, #4c1d95);
     color: white;
 }
 
+/* REMOVE HEADER */
 [data-testid="stHeader"] {
     background: transparent;
+}
+
+/* SIDEBAR */
+section[data-testid="stSidebar"] {
+    background: rgba(10,15,44,0.8);
+    backdrop-filter: blur(20px);
+}
+
+/* GLOW TEXT */
+.glow-title {
+    font-size: 42px;
+    font-weight: bold;
+    color: #7dd3fc;
+    text-align: center;
+    text-shadow:
+        0 0 5px #38bdf8,
+        0 0 10px #38bdf8,
+        0 0 20px #0ea5e9;
 }
 
 /* CHAT BUBBLES */
@@ -39,36 +66,52 @@ html, body, [data-testid="stAppViewContainer"] {
     text-align: left;
 }
 
-/* INPUT BOX */
+/* INPUT */
 div[data-testid="stChatInput"] {
     background: rgba(255,255,255,0.08) !important;
     backdrop-filter: blur(20px);
     border-radius: 30px !important;
-    border: 1px solid rgba(255,255,255,0.2);
 }
 
 textarea {
     color: white !important;
 }
 
-/* CENTER ELEMENTS */
-.center {
-    text-align: center;
-}
 </style>
 """, unsafe_allow_html=True)
 
-# 🏷 HEADER (LOGO + TITLE)
-st.markdown('<div class="center">', unsafe_allow_html=True)
+# 🧩 SIDEBAR (LOGO + CHATS)
+with st.sidebar:
 
-st.image("riva_logo.png", width=120)
+    st.image("riva_logo.png", width=120)
 
-st.markdown("<h1>Riva</h1>", unsafe_allow_html=True)
+    st.markdown(
+        '<div class="glow-title">Riva</div>',
+        unsafe_allow_html=True
+    )
 
-st.markdown('</div>', unsafe_allow_html=True)
+    st.markdown("---")
 
-# 💬 CHAT DISPLAY
-for msg in st.session_state.messages:
+    # ➕ NEW CHAT
+    if st.button("➕ New Chat"):
+        new_id = str(uuid.uuid4())
+        st.session_state.chats[new_id] = []
+        st.session_state.current_chat = new_id
+        st.rerun()
+
+    st.markdown("### Chats")
+
+    # LIST CHATS
+    for chat_id in st.session_state.chats:
+        if st.button(f"Chat {chat_id[:5]}", key=chat_id):
+            st.session_state.current_chat = chat_id
+            st.rerun()
+
+# 🧠 CURRENT CHAT
+messages = st.session_state.chats[st.session_state.current_chat]
+
+# 💬 DISPLAY CHAT
+for msg in messages:
     if msg["role"] == "user":
         st.markdown(f'<div class="user-bubble">{msg["content"]}</div>', unsafe_allow_html=True)
     else:
@@ -78,38 +121,33 @@ for msg in st.session_state.messages:
 user_input = st.chat_input("Message Riva...")
 
 if user_input:
-    # Add user message
-    st.session_state.messages.append({"role": "user", "content": user_input})
+    messages.append({"role": "user", "content": user_input})
 
-    # 🌀 SHOW SPINNING AVATAR WHILE THINKING
-    with st.spinner("Riva is thinking..."):
-        st.markdown(
-            """
-            <div style="text-align:center;">
-                <img src="riva_spin.gif" width="100">
-            </div>
-            """,
-            unsafe_allow_html=True
-        )
+    # 🌀 CUSTOM THINKING (NO STREAMLIT SPINNER)
+    thinking_placeholder = st.empty()
 
-        response = client.chat.completions.create(
-            model="llama-3.3-70b-versatile",
-            messages=[
-                {"role": "system", "content": "You are Riva, calm, futuristic, slightly witty."}
-            ] + st.session_state.messages
-        )
+    thinking_placeholder.markdown(
+        """
+        <div style="text-align:center;">
+            <img src="riva_spin.gif" width="100">
+            <p style="color:#7dd3fc;">Riva is thinking...</p>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
 
-        reply = response.choices[0].message.content
+    # 🤖 AI RESPONSE
+    response = client.chat.completions.create(
+        model="llama-3.3-70b-versatile",
+        messages=[
+            {"role": "system", "content": "You are Riva, calm, futuristic, slightly witty."}
+        ] + messages
+    )
 
-    # Add AI response
-    st.session_state.messages.append({"role": "assistant", "content": reply})
+    reply = response.choices[0].message.content
+
+    thinking_placeholder.empty()
+
+    messages.append({"role": "assistant", "content": reply})
 
     st.rerun()
-
-# ⚙️ SIDEBAR
-with st.sidebar:
-    st.title("⚙️ Riva")
-
-    if st.button("🧹 Clear Chat"):
-        st.session_state.messages = []
-        st.rerun()
