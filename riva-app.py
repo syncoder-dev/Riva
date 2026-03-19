@@ -1,121 +1,131 @@
 import streamlit as st
 from groq import Groq
 import uuid
+import base64
 
 # ⚙️ CONFIG
 st.set_page_config(page_title="Riva AI", layout="wide")
 
 client = Groq(api_key=st.secrets["GROQ_API_KEY"])
 
-# 🧠 MULTI CHAT MEMORY
+# 🔐 SIMPLE LOGIN SYSTEM
+if "logged_in" not in st.session_state:
+    st.session_state.logged_in = False
+
+if not st.session_state.logged_in:
+    st.title("🔐 Login to Riva")
+
+    username = st.text_input("Username")
+    password = st.text_input("Password", type="password")
+
+    if st.button("Login"):
+        if username == "admin" and password == "1234":
+            st.session_state.logged_in = True
+            st.rerun()
+        else:
+            st.error("Invalid credentials")
+
+    st.stop()
+
+# 🧠 PROMPTS
+REVO_PROMPT = """
+You are Revo, the core intelligence behind Riva.
+
+You control reasoning, clarity, and usefulness.
+You ensure:
+- Responses are accurate and structured
+- No unnecessary complexity
+- You silently optimize answers
+
+You never speak directly.
+"""
+
+RIVA_PROMPT = """
+You are Riva, a futuristic AI assistant.
+
+- Calm, intelligent, slightly witty
+- Clear and simple language
+- Helpful and engaging
+
+You are the voice. Revo is the brain.
+"""
+
+# 🔁 LOAD GIF
+def load_gif(path):
+    with open(path, "rb") as f:
+        return base64.b64encode(f.read()).decode()
+
+gif_base64 = load_gif("riva_spin.gif")
+
+# 🧠 MULTI CHAT WITH NAMES
 if "chats" not in st.session_state:
     st.session_state.chats = {}
+
+if "chat_names" not in st.session_state:
+    st.session_state.chat_names = {}
 
 if "current_chat" not in st.session_state:
     chat_id = str(uuid.uuid4())
     st.session_state.current_chat = chat_id
     st.session_state.chats[chat_id] = []
+    st.session_state.chat_names[chat_id] = "New Chat"
 
-# 🎨 UI STYLE
+# 🎨 UI
 st.markdown("""
 <style>
-
-/* BACKGROUND */
 html, body, [data-testid="stAppViewContainer"] {
     background: linear-gradient(135deg, #0a0f2c, #4c1d95);
     color: white;
 }
-
-/* REMOVE HEADER */
-[data-testid="stHeader"] {
-    background: transparent;
-}
-
-/* SIDEBAR */
-section[data-testid="stSidebar"] {
-    background: rgba(10,15,44,0.8);
-    backdrop-filter: blur(20px);
-}
-
-/* GLOW TEXT */
 .glow-title {
-    font-size: 42px;
-    font-weight: bold;
-    color: #7dd3fc;
+    font-size: 50px;
     text-align: center;
-    text-shadow:
-        0 0 5px #38bdf8,
-        0 0 10px #38bdf8,
-        0 0 20px #0ea5e9;
+    color: #7dd3fc;
+    text-shadow: 0 0 10px #38bdf8, 0 0 20px #0ea5e9;
 }
-
-/* CHAT BUBBLES */
-.user-bubble {
-    background: rgba(168,85,247,0.35);
-    padding: 12px 16px;
-    margin: 10px 0;
-    border-radius: 20px;
-    text-align: right;
-}
-
-.ai-bubble {
-    background: rgba(59,130,246,0.25);
-    padding: 12px 16px;
-    margin: 10px 0;
-    border-radius: 20px;
-    text-align: left;
-}
-
-/* INPUT */
-div[data-testid="stChatInput"] {
-    background: rgba(255,255,255,0.08) !important;
-    backdrop-filter: blur(20px);
-    border-radius: 30px !important;
-}
-
-textarea {
-    color: white !important;
-}
-
 </style>
 """, unsafe_allow_html=True)
 
-# 🧩 SIDEBAR (LOGO + CHATS)
+# 🧩 SIDEBAR
 with st.sidebar:
 
-    st.image("riva_logo.png", width=120)
-
-    st.markdown(
-        '<div class="glow-title">Riva</div>',
-        unsafe_allow_html=True
-    )
-
-    st.markdown("---")
-
-    # ➕ NEW CHAT
     if st.button("➕ New Chat"):
         new_id = str(uuid.uuid4())
         st.session_state.chats[new_id] = []
+        st.session_state.chat_names[new_id] = "New Chat"
         st.session_state.current_chat = new_id
         st.rerun()
 
     st.markdown("### Chats")
 
-    # LIST CHATS
     for chat_id in st.session_state.chats:
-        if st.button(f"Chat {chat_id[:5]}", key=chat_id):
+        name = st.session_state.chat_names[chat_id]
+        if st.button(name, key=chat_id):
             st.session_state.current_chat = chat_id
             st.rerun()
 
-# 🧠 CURRENT CHAT
+    st.markdown("---")
+
+    # ✏️ RENAME CHAT
+    new_name = st.text_input("Rename chat")
+
+    if st.button("Rename"):
+        st.session_state.chat_names[st.session_state.current_chat] = new_name
+        st.rerun()
+
+# 🏷 HEADER
+st.image("riva_logo.png", width=200)
+st.markdown('<div class="glow-title">Riva</div>', unsafe_allow_html=True)
+
+# 💬 CHAT
 messages = st.session_state.chats[st.session_state.current_chat]
 
-# 💬 DISPLAY CHAT
 for msg in messages:
-    if msg["role"] == "user":
-        st.markdown(f'<div class="user-bubble">{msg["content"]}</div>', unsafe_allow_html=True)
+    role = msg["role"]
+    if role == "user":
+        st.markdown(f"**You:** {msg['content']}")
     else:
-        st.markdown(f'<div class="ai-bubble">{msg["content"]}</div>', unsafe_allow_html=True)
+        st.markdown(f"**Riva:** {msg['content']}")
 
 # 💬 INPUT
 user_input = st.chat_input("Message Riva...")
@@ -123,30 +133,25 @@ user_input = st.chat_input("Message Riva...")
 if user_input:
     messages.append({"role": "user", "content": user_input})
 
-    # 🌀 CUSTOM THINKING (NO STREAMLIT SPINNER)
-    thinking_placeholder = st.empty()
+    thinking = st.empty()
+    thinking.markdown(f"""
+    <div style="text-align:center;">
+        <img src="data:image/gif;base64,{gif_base64}" width="120">
+        <p>Thinking...</p>
+    </div>
+    """, unsafe_allow_html=True)
 
-    thinking_placeholder.markdown(
-        """
-        <div style="text-align:center;">
-            <img src="riva_spin.gif" width="100">
-            <p style="color:#7dd3fc;">Riva is thinking...</p>
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
-
-    # 🤖 AI RESPONSE
     response = client.chat.completions.create(
         model="llama-3.3-70b-versatile",
         messages=[
-            {"role": "system", "content": "You are Riva, calm, futuristic, slightly witty."}
+            {"role": "system", "content": REVO_PROMPT},
+            {"role": "system", "content": RIVA_PROMPT}
         ] + messages
     )
 
     reply = response.choices[0].message.content
 
-    thinking_placeholder.empty()
+    thinking.empty()
 
     messages.append({"role": "assistant", "content": reply})
 
