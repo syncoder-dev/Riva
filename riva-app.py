@@ -1,131 +1,136 @@
 import streamlit as st
 from groq import Groq
-import uuid
 import base64
+PROMPTS
+REVA_PROMPT = "You are Riva, a calm, futuristic AI assistant. You are clear, slightly witty, and helpful."
 
+REVO_PROMPT = "You are Revo, the hidden intelligence layer. You refine responses to be smarter, sharper, and more structured."
+
+# 🧠 SESSION STATE
 # ⚙️ CONFIG
 st.set_page_config(page_title="Riva AI", layout="wide")
 
 client = Groq(api_key=st.secrets["GROQ_API_KEY"])
 
-# 🔐 SIMPLE LOGIN SYSTEM
-if "logged_in" not in st.session_state:
-    st.session_state.logged_in = False
-
-if not st.session_state.logged_in:
-    st.title("🔐 Login to Riva")
-
-    username = st.text_input("Username")
-    password = st.text_input("Password", type="password")
-
-    if st.button("Login"):
-        if username == "admin" and password == "1234":
-            st.session_state.logged_in = True
-            st.rerun()
-        else:
-            st.error("Invalid credentials")
-
-    st.stop()
-
-# 🧠 PROMPTS
-REVO_PROMPT = """
-You are Revo, the core intelligence behind Riva.
-
-You control reasoning, clarity, and usefulness.
-You ensure:
-- Responses are accurate and structured
-- No unnecessary complexity
-- You silently optimize answers
-
-You never speak directly.
-"""
-
-RIVA_PROMPT = """
-You are Riva, a futuristic AI assistant.
-
-- Calm, intelligent, slightly witty
-- Clear and simple language
-- Helpful and engaging
-
-You are the voice. Revo is the brain.
-"""
-
-# 🔁 LOAD GIF
-def load_gif(path):
-    with open(path, "rb") as f:
-        return base64.b64encode(f.read()).decode()
-
-gif_base64 = load_gif("riva_spin.gif")
-
-# 🧠 MULTI CHAT WITH NAMES
+# 🧠 SYSTEM 
 if "chats" not in st.session_state:
-    st.session_state.chats = {}
-
-if "chat_names" not in st.session_state:
-    st.session_state.chat_names = {}
+    st.session_state.chats = {"New Chat": []}
 
 if "current_chat" not in st.session_state:
-    chat_id = str(uuid.uuid4())
-    st.session_state.current_chat = chat_id
-    st.session_state.chats[chat_id] = []
-    st.session_state.chat_names[chat_id] = "New Chat"
+    st.session_state.current_chat = "New Chat"
 
-# 🎨 UI
+# 🎨 BACKGROUND + FONT + GLOW
 st.markdown("""
 <style>
-html, body, [data-testid="stAppViewContainer"] {
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@500&display=swap');
+
+/* 🌌 Background */
+[data-testid="stAppViewContainer"] {
     background: linear-gradient(135deg, #0a0f2c, #4c1d95);
     color: white;
 }
-.glow-title {
-    font-size: 50px;
+
+/* Remove header */
+[data-testid="stHeader"] {
+    background: transparent;
+}
+
+/* Title */
+.title {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 48px;
     text-align: center;
-    color: #7dd3fc;
-    text-shadow: 0 0 10px #38bdf8, 0 0 20px #0ea5e9;
+    color: #00eaff;
+    text-shadow: 0 0 10px #00eaff, 0 0 25px #00eaff;
+    margin-bottom: 10px;
+}
+
+/* Chat bubbles */
+.user-bubble {
+    background: rgba(168,85,247,0.35);
+    padding: 12px;
+    border-radius: 20px;
+    margin: 10px 0;
+    text-align: right;
+}
+
+.ai-bubble {
+    background: rgba(59,130,246,0.25);
+    padding: 12px;
+    border-radius: 20px;
+    margin: 10px 0;
+    text-align: left;
 }
 </style>
 """, unsafe_allow_html=True)
 
-# 🧩 SIDEBAR
-with st.sidebar:
+# 🖼 FUNCTION TO LOAD IMAGE AS BASE64 (FIXES GIF ISSUES)
+def load_image(path):
+    with open(path, "rb") as f:
+        data = base64.b64encode(f.read()).decode()
+    return data
 
+# 🏷️ HEADER (LOGO + TITLE)
+col1, col2, col3 = st.columns([1,2,1])
+
+with col2:
+    try:
+        logo = load_image("riva_logo.png")
+        st.markdown(f'<img src="data:image/png;base64,{logo}" width="160" style="display:block;margin:auto;">', unsafe_allow_html=True)
+    except:
+        pass
+
+    st.markdown('<div class="title">RIVA</div>', unsafe_allow_html=True)
+
+# 📂 SIDEBAR (AVATAR + CHAT CONTROL)
+with st.sidebar:
+    st.markdown("### ⚙️ Riva Control")
+
+    # 🔄 SPINNING AVATAR (REAL FIX)
+    try:
+        gif = load_image("riva_spin.gif")
+        st.markdown(
+            f'<img src="data:image/gif;base64,{gif}" width="120">',
+            unsafe_allow_html=True
+        )
+    except:
+        st.write("⚠️ GIF not found")
+
+    st.divider()
+
+    # 🧾 CHAT LIST
+    chat_names = list(st.session_state.chats.keys())
+    selected = st.selectbox("Chats", chat_names, index=chat_names.index(st.session_state.current_chat))
+    st.session_state.current_chat = selected
+
+    # ➕ NEW CHAT
     if st.button("➕ New Chat"):
-        new_id = str(uuid.uuid4())
-        st.session_state.chats[new_id] = []
-        st.session_state.chat_names[new_id] = "New Chat"
-        st.session_state.current_chat = new_id
+        new_name = f"Chat {len(chat_names)+1}"
+        st.session_state.chats[new_name] = []
+        st.session_state.current_chat = new_name
         st.rerun()
 
-    st.markdown("### Chats")
-
-    for chat_id in st.session_state.chats:
-        name = st.session_state.chat_names[chat_id]
-        if st.button(name, key=chat_id):
-            st.session_state.current_chat = chat_id
+    # ✏️ RENAME
+    new_title = st.text_input("Rename chat")
+    if st.button("Rename"):
+        if new_title:
+            st.session_state.chats[new_title] = st.session_state.chats.pop(st.session_state.current_chat)
+            st.session_state.current_chat = new_title
             st.rerun()
 
-    st.markdown("---")
-
-    # ✏️ RENAME CHAT
-    new_name = st.text_input("Rename chat")
-
-    if st.button("Rename"):
-        st.session_state.chat_names[st.session_state.current_chat] = new_name
+    # 🧹 CLEAR
+    if st.button("🧹 Clear Chat"):
+        st.session_state.chats[st.session_state.current_chat] = []
         st.rerun()
 
-# 🏷 HEADER
-st.image("riva_logo.png", width=200)
-st.markdown('<div class="glow-title">Riva</div>', unsafe_allow_html=True)
-
-# 💬 CHAT
+# 💬 DISPLAY CHAT
 messages = st.session_state.chats[st.session_state.current_chat]
 
 for msg in messages:
-    role = msg["role"]
-    if role == "user":
-        st.markdown(f"**You:** {msg['content']}")
+    if msg["role"] == "user":
+        st.markdown(f'<div class="user-bubble">{msg["content"]}</div>', unsafe_allow_html=True)
     else:
-        st.markdown(f"**Riva:** {msg['content']}")
+        st.markdown(f'<div class="ai-bubble">{msg["content"]}</div>', unsafe_allow_html=True)
 
 # 💬 INPUT
 user_input = st.chat_input("Message Riva...")
@@ -133,26 +138,16 @@ user_input = st.chat_input("Message Riva...")
 if user_input:
     messages.append({"role": "user", "content": user_input})
 
-    thinking = st.empty()
-    thinking.markdown(f"""
-    <div style="text-align:center;">
-        <img src="data:image/gif;base64,{gif_base64}" width="120">
-        <p>Thinking...</p>
-    </div>
-    """, unsafe_allow_html=True)
-
+    # 🔥 REVA + REVO COMBINED FLOW
     response = client.chat.completions.create(
         model="llama-3.3-70b-versatile",
         messages=[
+            {"role": "system", "content": REVA_PROMPT},
             {"role": "system", "content": REVO_PROMPT},
-            {"role": "system", "content": RIVA_PROMPT}
         ] + messages
     )
 
     reply = response.choices[0].message.content
-
-    thinking.empty()
-
     messages.append({"role": "assistant", "content": reply})
 
     st.rerun()
