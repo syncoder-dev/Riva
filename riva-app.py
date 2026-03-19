@@ -3,44 +3,34 @@ from groq import Groq
 
 # ⚙️ CONFIG
 st.set_page_config(page_title="Riva AI", layout="wide")
-
 client = Groq(api_key=st.secrets["GROQ_API_KEY"])
 
 # 🧠 MEMORY
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-if "sidebar_open" not in st.session_state:
-    st.session_state.sidebar_open = True
-
-# 🎨 UI
+# 🎨 UI + ANIMATION CSS
 st.markdown("""
 <style>
-
-/* 🌌 BACKGROUND */
 html, body, [data-testid="stAppViewContainer"] {
     background: linear-gradient(135deg, #6d28d9, #0f172a);
     color: white;
 }
 
-/* REMOVE DEFAULT HEADER */
 [data-testid="stHeader"] {
     background: transparent;
 }
 
-/* SIDEBAR STYLE */
 section[data-testid="stSidebar"] {
     background: rgba(15,23,42,0.6);
     backdrop-filter: blur(20px);
-    transition: all 0.3s ease;
 }
 
-/* CHAT CONTAINER */
 .block-container {
     padding: 2rem;
 }
 
-/* 💬 USER BUBBLE */
+/* 💬 CHAT */
 .user-bubble {
     background: rgba(168,85,247,0.35);
     padding: 12px 16px;
@@ -50,7 +40,6 @@ section[data-testid="stSidebar"] {
     animation: fadeIn 0.3s ease;
 }
 
-/* 🤖 AI BUBBLE */
 .ai-bubble {
     background: rgba(59,130,246,0.25);
     padding: 12px 16px;
@@ -60,12 +49,11 @@ section[data-testid="stSidebar"] {
     animation: fadeIn 0.3s ease;
 }
 
-/* ✨ INPUT BAR FIX */
+/* INPUT */
 div[data-testid="stChatInputContainer"] {
     background: transparent !important;
 }
 
-/* 💎 INPUT BOX */
 div[data-testid="stChatInput"] {
     background: rgba(255,255,255,0.08) !important;
     backdrop-filter: blur(20px);
@@ -74,35 +62,65 @@ div[data-testid="stChatInput"] {
     padding: 10px !important;
 }
 
-/* TEXT */
 div[data-testid="stChatInput"] textarea {
     color: white !important;
     background: transparent !important;
 }
 
-/* PLACEHOLDER */
 textarea::placeholder {
     color: rgba(255,255,255,0.5) !important;
 }
 
-/* ANIMATION */
+/* ✨ ANIMATION */
 @keyframes fadeIn {
     from {opacity: 0; transform: translateY(10px);}
     to {opacity: 1; transform: translateY(0);}
 }
 
+/* 🌀 AVATAR */
+.riva-avatar {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 10px;
+}
+
+.riva-avatar img {
+    width: 90px;
+}
+
+/* 🔄 THINKING */
+.thinking {
+    animation: spin 2s linear infinite, pulse 2s ease-in-out infinite;
+}
+
+@keyframes spin {
+    from {transform: rotate(0deg);}
+    to {transform: rotate(360deg);}
+}
+
+@keyframes pulse {
+    0% {transform: scale(1);}
+    50% {transform: scale(1.1);}
+    100% {transform: scale(1);}
+}
 </style>
 """, unsafe_allow_html=True)
 
-# 🎛 SIDEBAR CONTROL
+# 🎛 SIDEBAR
 with st.sidebar:
     st.title("⚙️ Riva")
     if st.button("🧹 Clear Chat"):
         st.session_state.messages = []
         st.rerun()
 
-# 🏷 TITLE
-st.title("🤖 Riva")
+# 🏷 TITLE + AVATAR
+st.title("RIVA")
+
+avatar_placeholder = st.empty()
+avatar_placeholder.markdown(
+    '<div class="riva-avatar"><img src="riva_avatar.png"></div>',
+    unsafe_allow_html=True
+)
 
 # 💬 CHAT DISPLAY
 for msg in st.session_state.messages:
@@ -117,6 +135,12 @@ user_input = st.chat_input("Message Riva...")
 if user_input:
     st.session_state.messages.append({"role": "user", "content": user_input})
 
+    # 🔄 START ANIMATION
+    avatar_placeholder.markdown(
+        '<div class="riva-avatar"><img src="riva_avatar.png" class="thinking"></div>',
+        unsafe_allow_html=True
+    )
+
     response = client.chat.completions.create(
         model="llama-3.3-70b-versatile",
         messages=[
@@ -126,5 +150,11 @@ if user_input:
 
     reply = response.choices[0].message.content
     st.session_state.messages.append({"role": "assistant", "content": reply})
+
+    # 🧠 STOP ANIMATION
+    avatar_placeholder.markdown(
+        '<div class="riva-avatar"><img src="riva_avatar.png"></div>',
+        unsafe_allow_html=True
+    )
 
     st.rerun()
