@@ -1,124 +1,79 @@
-import streamlit as st
+# venora_core.py
+import os
+import json
+from datetime import datetime
 from groq import Groq
 
 # ⚙️ CONFIG
-st.set_page_config(page_title="Riva AI", layout="wide")
+API_KEY = os.getenv("GROQ_API_KEY")
+client = Groq(api_key=API_KEY)
 
-client = Groq(api_key=st.secrets["GROQ_API_KEY"])
+# 🧠 MEMORY HANDLING
+def load_memory(user_id, thread_id):
+    """Load a user's specific chat thread from JSON storage."""
+    mem_file = f"memory_{user_id}_{thread_id}.json"
+    if os.path.exists(mem_file):
+        with open(mem_file, "r") as f:
+            return json.load(f)
+    return []
 
-# 🧠 MEMORY
-if "messages" not in st.session_state:
-    st.session_state.messages = []
+def save_memory(user_id, thread_id, messages):
+    mem_file = f"memory_{user_id}_{thread_id}.json"
+    with open(mem_file, "w") as f:
+        json.dump(messages, f, indent=2)
 
-# 🎨 UI STYLE
-st.markdown("""
-<style>
-/* FULL BACKGROUND */
-[data-testid="stAppViewContainer"] {
-    background: linear-gradient(135deg, #0f172a, #6d28d9);
-    color: white;
-}
+# ✨ DYNAMIC SYSTEM PROMPT GENERATOR
+def generate_system_prompt(user_profile):
+    """Creates a system prompt based on user style and use case."""
+    style = user_profile.get("chat_style", "balanced")
+    use_case = user_profile.get("use_case", "general")
 
-/* REMOVE HEADER */
-[data-testid="stHeader"] {
-    background: transparent;
-}
+    personality_map = {
+        "casual": "friendly, witty, informal",
+        "professional": "clear, precise, formal",
+        "educational": "informative, explanatory, patient",
+        "balanced": "intelligent, adaptive, helpful"
+    }
 
-/* SIDEBAR SAME GRADIENT */
-section[data-testid="stSidebar"] {
-    background: linear-gradient(135deg, #0f172a, #6d28d9);
-    border-right: 1px solid rgba(255,255,255,0.1);
-}
-
-/* CENTER TITLE */
-.riva-title {
-    text-align: center;
-    font-size: 48px;
-    font-weight: bold;
-    color: #38bdf8;
-    text-shadow: 0 0 20px rgba(56,189,248,0.7);
-    margin-top: 10px;
-}
-
-/* CHAT BUBBLES */
-.user-bubble {
-    background: rgba(168,85,247,0.3);
-    padding: 12px;
-    border-radius: 15px;
-    margin: 8px 0;
-    text-align: right;
-}
-
-.ai-bubble {
-    background: rgba(56,189,248,0.2);
-    padding: 12px;
-    border-radius: 15px;
-    margin: 8px 0;
-    text-align: left;
-}
-
-/* INPUT BOX */
-div[data-testid="stChatInput"] {
-    background: rgba(255,255,255,0.08);
-    border-radius: 20px;
-}
-</style>
-""", unsafe_allow_html=True)
-
-# 📌 SIDEBAR
-with st.sidebar:
-    st.markdown("### Riva Control")
-
-    # BIG LOGO
-    st.image("riva_logo.png", use_container_width=True)
-
-    if st.button("🧹 Clear Chat"):
-        st.session_state.messages = []
-        st.rerun()
-
-# 🏷 TITLE CENTER
-st.markdown('<div class="riva-title">RIVA</div>', unsafe_allow_html=True)
-
-# 💬 CHAT DISPLAY
-for msg in st.session_state.messages:
-    if msg["role"] == "user":
-        st.markdown(f'<div class="user-bubble">{msg["content"]}</div>', unsafe_allow_html=True)
-    else:
-        st.markdown(f'<div class="ai-bubble">{msg["content"]}</div>', unsafe_allow_html=True)
-
-# 💬 INPUT
-user_input = st.chat_input("Message Riva...")
-
-if user_input:
-    st.session_state.messages.append({"role": "user", "content": user_input})
-
-    with st.spinner("Riva is thinking..."):
-        response = client.chat.completions.create(
-            model="llama-3.3-70b-versatile",
-            messages=[
-                {
-                    "role": "system",
-                    "content": """You are Riva, an advanced AI assistant.
-
+    return {
+        "role": "system",
+        "content": f"""
+You are Venora, an advanced AI assistant.
 Personality:
-- Calm, futuristic, slightly witty
-- Clear and intelligent
-- Not overly robotic
-
-Awareness:
-- You were created by a developer
-- You are powered by an advanced reasoning system
-
+- {personality_map.get(style)}
+- Adapts to the user's style dynamically
+Use Case:
+- {use_case}
+- Provide accurate, reliable, and relevant responses
 Behavior:
-- Give complete answers
-- Stay engaging but not dramatic
-- Avoid cutting off responses
+- Give complete answers without filler
+- Correct misconceptions politely
+- Avoid hallucinations and lazy responses
+- Prioritize privacy and data security
 """
-                }
-            ] + st.session_state.messages
-        )
+    }
+
+# 💬 RESPONSE HANDLER
+def venora_respond(user_id, thread_id, user_input, user_profile):
+    messages = load_memory(user_id, thread_id)
+
+    # Append user input
+    messages.append({"role": "user", "content": user_input, "timestamp": str(datetime.now())})
+
+    # Build messages for API
+    system_prompt = generate_system_prompt(user_profile)
+    api_messages = [system_prompt] + messages
+
+    # Call Groq API
+    response = client.chat.completions.create(
+        model="llama-3.3-70b-versatile",
+        messages=api_messages
+    )
 
     reply = response.choices[0].message.content
 
-    st.session_state.messages.append({"role": "assistant", "content": reply})
-    st.rerun()
+    # Save reply to memory
+    messages.append({"role": "assistant", "content": reply, "timestamp": str(datetime.now())})
+    save_memory(user_id, thread_id, messages)
+
+    return reply
